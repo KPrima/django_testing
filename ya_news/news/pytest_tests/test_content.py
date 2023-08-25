@@ -1,26 +1,22 @@
 import pytest
-from django.urls import reverse
 from django.conf import settings
+from django.urls import reverse
+
+from news.forms import CommentForm
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.parametrize(
-    'username, is_available',
-    (
-        (pytest.lazy_fixture('admin_client'), True),
-        (pytest.lazy_fixture('client'), False)
-    )
-)
 def test_comment_form_availability_for_anonymous_user(
     news_pk,
-    username,
-    is_available
+    client,
+    admin_client
 ):
     url = reverse('news:detail', args=news_pk)
-    response = username.get(url)
-    result = 'form' in response.context
-    assert result == is_available
+    response = client.get(url)
+    admin_response = admin_client.get(url)
+    assert (isinstance(admin_response.context['form'], CommentForm)
+            and 'form' not in response.context)
 
 
 @pytest.mark.usefixtures('set_of_news')
@@ -28,7 +24,7 @@ def test_news_count(client):
     url = reverse('news:home')
     response = client.get(url)
     news = response.context['object_list']
-    news_count = len(news)
+    news_count = news.count()
     assert news_count == settings.NEWS_COUNT_ON_HOME_PAGE
 
 
